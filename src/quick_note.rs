@@ -70,6 +70,7 @@ pub fn open_document(document: Option<String>, cx: &mut App) {
             traffic_light_position: Some(point(px(20.), px(crate::app::HEADER_H / 2. - 7.))),
         }),
         window_min_size: Some(size(px(480.), px(480.))),
+        app_id: Some("quiet-md".into()),
         ..Default::default()
     }, |window, cx| cx.new(|cx| crate::app::Workspace::new_document_window(document, window, cx)));
     match result {

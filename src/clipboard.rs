@@ -28,7 +28,12 @@ pub fn clipboard_html() -> Option<String> {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "linux")]
+pub fn clipboard_html() -> Option<String> {
+    gpui::clipboard_html()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 pub fn clipboard_html() -> Option<String> {
     None
 }

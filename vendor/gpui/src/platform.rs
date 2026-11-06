@@ -4,6 +4,8 @@ mod keystroke;
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 mod linux;
+#[cfg(all(any(target_os = "linux", target_os = "freebsd"), feature = "wayland"))]
+pub use linux::clipboard_html;
 
 #[cfg(target_os = "macos")]
 mod mac;

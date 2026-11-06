@@ -2,20 +2,23 @@
 
 Quiet.md 是一个单进程 GPUI 应用（Rust，约 4 万行）。一篇文档在内存里是一棵 block 树（`model.rs`），在磁盘上是一份 DocxXML 文件（`docxml.rs`）。编辑器把这棵树画成一个虚拟化列表。
 
-仓库是一个 Cargo workspace，分两个 crate：
+仓库是一个 Cargo workspace，分三个 crate：
 
 - **`crates/core`（`fdl_core`，约 1 万行）**：文档引擎。包括模型、DocxXML、编辑内核和撤销、磁盘上的文档库、Markdown / HTML 导入和 Markdown 导出。它不依赖 GPUI，可以单独编译和测试（`cargo test -p fdl_core`），fuzzer 也在这里。
-- **根 crate（`quiet_md`）**：GPUI 应用，即窗口、视图、渲染、菜单和浮层。`main.rs` 把 `fdl_core` 的模块重新导出到 crate 根，`editor/mod.rs` 重新导出 `editor::core` 和 `editor::table_ops`，所以应用里仍然写 `crate::model`、`super::core`。
+- **`crates/cli`（`quiet_cli`，二进制为 `quiet`）**：无头命令行工具。直接链接 `fdl_core`，为脚本和 AI Agent 提供文档管理、结构探测、细粒度块修改与图片插入等能力。
+- **根 crate（`quiet_md`）**：GPUI 原生桌面应用，即窗口、视图、渲染、菜单和浮层。`main.rs` 把 `fdl_core` 的模块重新导出到 crate 根，`editor/mod.rs` 重新导出 `editor::core` 和 `editor::table_ops`，所以应用里仍然写 `crate::model`、`super::core`。
 
-依赖只能从应用指向 core。core 里的模块只引用 core 里的模块。
+依赖只能从应用或 CLI 指向 core。core 里的模块只引用 core 里的模块。
 
 ```
-main.rs ─ 窗口
-  └─ app.rs  Workspace（窗口根视图）
-       ├─ store.rs        文档库：docs/*.xml + index.json（见 FORMAT.md）           [core]
+crates/cli/src/main.rs (quiet) ──┐
+                                 ├──> crates/core (fdl_core) ── docs/*.xml + index.json
+main.rs (quiet_md) ──────────────┘
+  └─ app.rs Workspace
+       ├─ store.rs (Store)
        ├─ sidebar / home / search / trash / tree / docmenu / docinfo / modes
-       └─ editor::Editor（view.rs）   打开的那篇文档
-            └─ editor::Core（core.rs） 文档 + 选区 + 撤销栈                        [core]
+       └─ editor::Editor (view.rs)
+            └─ editor::Core (core.rs)
 ```
 
 ## 分层
@@ -25,6 +28,7 @@ main.rs ─ 窗口
 | 模型 | `model.rs` | `Document` / `Block` / `BlockKind` / `RichText`（文本 + 样式 run）/ 行内对象 `Inline { kind, xml }` | 纯数据。`BlockKind::nests()` 决定哪些 block 能有子级 |
 | 格式 | `docxml.rs` | DocxXML ⇄ `Document` | 未知元素原样保留为 `Raw`；行内对象保留原文、读入时解析一次类型；写出的格式稳定，见 FORMAT.md |
 | 编辑内核 | `editor/core.rs`、`editor/table_ops.rs` | 所有改文档的操作：输入、删除、合并、缩进、转换、拖动、表格、折叠、行内对象、撤销 | 在 `fdl_core` 里，不碰 GPUI，能直接单测和 fuzz |
+| 命令行工具 | `crates/cli/src/*` | 自动化与 AI Agent 接口：文档搜索、读取、Block 定位修改、图片注入、统计 | 无头运行，通过 flock 与 GUI 安全并发 |
 | 编辑视图 | `editor/view.rs` + 其余 `editor/*` | 键鼠事件 → Core 调用；浮层、菜单、各 block 的交互 | 改文档只经过 Core（下文） |
 | 渲染 | `editor/render.rs`、`editor/text.rs` | block → GPUI 元素；`text.rs` 是自绘富文本元素 | 只读文档 |
 | 应用 | `app.rs` 等顶层模块 | 侧栏、主页、搜索、回收站、文档树、导入导出、打印 | 通过 `Store` 读写磁盘 |

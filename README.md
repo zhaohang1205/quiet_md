@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/s1dashu/quiet-md/releases/latest"><img src="https://img.shields.io/github/v/release/s1dashu/quiet-md?label=release&color=2f6feb" alt="Latest release"></a>
   <a href="https://github.com/s1dashu/quiet-md/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/s1dashu/quiet-md/ci.yml?branch=main&label=CI" alt="CI status"></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey" alt="macOS and Windows">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows, Linux">
   <img src="https://img.shields.io/badge/built%20with-Rust%20%2B%20GPUI-dea584?logo=rust" alt="Built with Rust and GPUI">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/s1dashu/quiet-md?color=green" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/status-beta-orange" alt="Beta">
@@ -59,9 +59,11 @@
 |---|---|
 | **macOS** (Apple Silicon) | macOS 13 or later |
 | **Windows** (x64) | Windows 10 version 2004 or later |
+| **Linux** (x64 / arm64) | Kernel 5.15+, Wayland or X11 |
 
 - **macOS**: unzip and drag `quiet.md.app` into Applications. The app is signed and notarized by Apple.
 - **Windows**: run the installer. By default it installs for the current user only, and uninstalling never deletes your notes. If SmartScreen appears on first launch, click **More info → Run anyway**.
+- **Linux**: build with `cargo build --release` or run `scripts/preview.sh` to install desktop entries and icons.
 
 You can also download from [Quiet.md](https://quiet.md/?lang=en). Every release and its SHA-256 checksums are on [GitHub Releases](https://github.com/s1dashu/quiet-md/releases). There is no Intel Mac build yet; you can [build from source](CONTRIBUTING.md#从源码构建).
 
@@ -94,8 +96,32 @@ A 120 Hz display gives each frame 8.3 ms. Even at P95 on a million-character doc
 - **Editing**: headings, ordered and bulleted lists, to-dos, quotes, code blocks with syntax highlighting, LaTeX math, tables (with merged cells), callouts, columns, images, attachments and covers. Markdown shortcuts such as `#`, `-`, `[]` and `>`, plus a `/` slash menu.
 - **Organizing**: a document tree, pinning, favorites, full-text search and a trash.
 - **Import and export**: import Markdown and Feishu (Lark) DocxXML; export Markdown and PDF, or print directly. Pasting from Feishu or a web page keeps the structure.
-- **Shortcuts**: press `⌘ /` (`Ctrl+/` on Windows) to see them all. Every one can be rebound. On Windows, Ctrl stands in for ⌘ and Alt for ⌥; the app and the Getting started guides show the keys for your system.
-- **Themes**: four built-in styles — Craft, Feishu, Notion and Obsidian — each with a dark variant, or write your own in CSS; see [docs/THEMES.md](docs/THEMES.md).
+- **CLI & AI Agent**: native headless CLI `quiet` (`crates/cli`) for inspecting block trees, adding images, modifying blocks, and managing notes from scripts and AI agents.
+
+### Agent Usage
+
+The `quiet` skill lets AI agents automate note management via the CLI. Agents should always use the `--json` flag for machine‑readable output and refer to blocks using locators (tree path, ID, or special keywords).
+
+**Common patterns**:
+```sh
+# List all blocks in JSON
+quiet list --json
+
+# Add a todo block under a specific locator
+quiet add --type todo "Buy milk" --loc 2.1 --json
+
+# Update a block by its ID
+quiet edit --id 14 --content "Updated content" --json
+```
+
+**Locator guide**:
+| Locator type | Example | Meaning |
+|---|---|---|
+| Tree path | `0.2.1` | Navigate the block hierarchy by indices |
+| ID | `#14` | Unique block identifier |
+| Keywords | `first`, `last` | First or last block in a container |
+- **Shortcuts**: press `⌘ /` (`Ctrl+/` on Windows and Linux) to see them all. Every one can be rebound. On Windows and Linux, Ctrl stands in for ⌘ and Alt for ⌥; the app and the Getting started guides show the keys for your system.
+- **Themes & Linux**: four built-in styles — Craft, Feishu, Notion and Obsidian — each with a dark variant, or write your own in CSS; see [docs/THEMES.md](docs/THEMES.md). Native Wayland and X11 GPU rendering with auto dark-mode sync and rich HTML clipboard.
 
 ## Recent updates
 

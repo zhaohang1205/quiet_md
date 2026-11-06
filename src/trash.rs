@@ -34,8 +34,8 @@ pub(crate) fn page_header(ws: &Workspace, title: &'static str, left: f32, cx: &m
         .pl(if ws.sidebar_open { px(left) } else { px(theme::TRAFFIC_LIGHTS_W) })
         .pr(px(crate::ui::header_right_inset()))
         .title_bar()
-        .when(!ws.sidebar_open && cfg!(target_os = "windows"), |d| d.child(div().mr(px(12.)).child(ws.header_navigation(cx))))
-        .when(!ws.sidebar_open && !cfg!(target_os = "windows"), |d| {
+        .when(!ws.sidebar_open && cfg!(not(target_os = "macos")), |d| d.child(div().mr(px(12.)).child(ws.header_navigation(cx))))
+        .when(!ws.sidebar_open && cfg!(target_os = "macos"), |d| {
             d.child(
                 div()
                     .id("open-sidebar")

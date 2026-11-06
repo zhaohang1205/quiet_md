@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/s1dashu/quiet-md/releases/latest"><img src="https://img.shields.io/github/v/release/s1dashu/quiet-md?label=release&color=2f6feb" alt="最新版本"></a>
   <a href="https://github.com/s1dashu/quiet-md/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/s1dashu/quiet-md/ci.yml?branch=main&label=CI" alt="CI 状态"></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey" alt="支持 macOS 和 Windows">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="支持 macOS、Windows 和 Linux">
   <img src="https://img.shields.io/badge/built%20with-Rust%20%2B%20GPUI-dea584?logo=rust" alt="使用 Rust 和 GPUI 构建">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/s1dashu/quiet-md?color=green" alt="MIT 许可"></a>
   <img src="https://img.shields.io/badge/status-beta-orange" alt="Beta">
@@ -59,9 +59,11 @@
 |---|---|
 | **macOS**（Apple Silicon） | macOS 13 及以上 |
 | **Windows**（x64） | Windows 10 2004 及以上 |
+| **Linux**（x64 / arm64） | 内核 5.15 及以上，Wayland 或 X11 |
 
 - **macOS**：解压后把 `quiet.md.app` 拖进「应用程序」。安装包已签名并通过 Apple 公证。
 - **Windows**：运行安装程序，默认只装到当前用户目录，卸载不会删除笔记。如果首次运行出现 SmartScreen 提示，点「更多信息 → 仍要运行」即可。
+- **Linux**：使用 `cargo build --release` 编译，或运行 `scripts/preview.sh` 自动安装桌面快捷方式与图标。
 
 也可以在官网 [Quiet.md](https://quiet.md) 下载。所有版本和 SHA-256 校验值见 [GitHub Releases](https://github.com/s1dashu/quiet-md/releases)。Intel Mac 暂无安装包，可以[从源码构建](CONTRIBUTING.md#从源码构建)。
 
@@ -92,7 +94,33 @@
 - **编辑**：标题、有序 / 无序列表、待办、引用、代码块（语法高亮）、LaTeX 公式、表格（可合并单元格）、高亮块、分栏、图片、附件、封面。支持 `#`、`-`、`[]`、`>` 等 Markdown 快捷输入和 `/` 斜杠菜单。
 - **整理**：文档树、置顶、收藏、全文搜索、回收站。
 - **导入导出**：导入 Markdown 和飞书 DocxXML；导出 Markdown、PDF，也可以直接打印。从飞书或网页粘贴时保留结构。
-- **快捷键**：按 `⌘ /`（Windows 上是 `Ctrl+/`）查看全部快捷键，每一个都能改。快捷键在 Windows 上用 Ctrl 代替 ⌘、Alt 代替 ⌥，应用里和「开始指南」里都按当前系统显示。
+- **CLI 与 AI Agent**：内置原生无头命令行工具 `quiet`（`crates/cli`），支持块级树形探测、图片插入、待办与代码块细粒度更新，方便终端脚本和 AI Agent 自动化操纵。
+
+### Agent 使用
+
+`quiet` 技能让 AI Agent 通过 CLI 自动化笔记管理。Agent 应始终使用 `--json` 参数获取机器可读的输出，并使用定位器（树路径、ID 或关键字）来定位块。
+
+**常用模式**：
+```sh
+# 列出所有块的 JSON
+quiet list --json
+
+# 在特定定位器下添加 todo 块
+quiet add --type todo "买牛奶" --loc 2.1 --json
+
+# 按 ID 更新块内容
+quiet edit --id 14 --content "更新内容" --json
+```
+
+**定位器指南**：
+| 定位器类型 | 示例 | 含义 |
+|---|---|---|
+| 树路径 | `0.2.1` | 按层级索引遍历块 |
+| ID | `#14` | 唯一块标识符 |
+| 关键字 | `first`、`last` | 容器中的首/末块 |
+
+- **快捷键**：按 `⌘ /`（Windows / Linux 上是 `Ctrl+/`）查看全部快捷键，每一个都能改。快捷键在 Windows / Linux 上用 Ctrl 代替 ⌘、Alt 代替 ⌥，应用里和「开始指南」里都按当前系统显示。
+- **主题与 Linux 原生**：内置 Craft、Feishu、Notion 和 Obsidian 四款风格，均有深色模式，也可以用 CSS 自定义（见 [docs/THEMES.md](docs/THEMES.md)）。Linux 下原生支持 Wayland / X11 GPU 渲染、系统深色模式自适应与富文本 HTML 剪贴板。
 - **主题**：内置 Craft、飞书、Notion、Obsidian 四套风格，也可以用 CSS 自己写，见 [docs/THEMES.md](docs/THEMES.md)。
 
 ## 近期更新

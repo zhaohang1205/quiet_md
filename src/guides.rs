@@ -47,7 +47,7 @@ pub fn initialize(root: &Path) -> anyhow::Result<()> {
     for (name, bytes) in FILES {
         let path = pending.join(name);
         fs::create_dir_all(path.parent().unwrap())?;
-        let windows = cfg!(target_os = "windows") && name.starts_with("docs/") && name.ends_with(".xml");
+        let windows = cfg!(not(target_os = "macos")) && name.starts_with("docs/") && name.ends_with(".xml");
         match std::str::from_utf8(bytes) {
             Ok(xml) if windows => fs::write(path, for_windows(xml))?,
             _ => fs::write(path, bytes)?,

@@ -21,7 +21,17 @@ pub(crate) const TEXT_MIME_TYPES: [&str; 3] =
 pub(crate) const FILE_LIST_MIME_TYPE: &str = "text/uri-list";
 
 /// Text mime types that we'll accept from other programs.
-pub(crate) const ALLOWED_TEXT_MIME_TYPES: [&str; 2] = ["text/plain;charset=utf-8", "UTF8_STRING"];
+// quiet.md: also accept text/plain and record external text/html offers for rich paste.
+pub(crate) const ALLOWED_TEXT_MIME_TYPES: [&str; 3] =
+    ["text/plain;charset=utf-8", "UTF8_STRING", "text/plain"];
+const ALLOWED_HTML_MIME_TYPES: [&str; 2] = ["text/html;charset=utf-8", "text/html"];
+
+static LAST_EXTERNAL_HTML: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Returns the `text/html` payload from the most recent external Wayland clipboard read.
+pub fn clipboard_html() -> Option<String> {
+    LAST_EXTERNAL_HTML.lock().ok().and_then(|g| g.clone())
+}
 
 pub(crate) struct Clipboard {
     connection: Connection,
@@ -119,6 +129,14 @@ impl<T: ReceiveData> DataOffer<T> {
         Some(ClipboardItem::new_string(result))
     }
 
+    fn read_html(&self, connection: &Connection) -> Option<String> {
+        let mime_type = self.mime_types.iter().find(|&m| {
+            ALLOWED_HTML_MIME_TYPES.iter().any(|&a| a == m)
+        })?;
+        let bytes = self.read_bytes(connection, mime_type)?;
+        String::from_utf8(bytes).ok()
+    }
+
     fn read_image(&self, connection: &Connection) -> Option<ClipboardItem> {
         for format in ImageFormat::iter() {
             let mime_type = format.mime_type();
@@ -158,6 +176,9 @@ impl Clipboard {
     }
 
     pub fn set(&mut self, item: ClipboardItem) {
+        if let Ok(mut g) = LAST_EXTERNAL_HTML.lock() {
+            *g = None;
+        }
         self.contents = Some(item);
     }
 
@@ -166,6 +187,9 @@ impl Clipboard {
     }
 
     pub fn set_offer(&mut self, data_offer: Option<DataOffer<WlDataOffer>>) {
+        if let Ok(mut g) = LAST_EXTERNAL_HTML.lock() {
+            *g = None;
+        }
         self.cached_read = None;
         self.current_offer = data_offer;
     }
@@ -202,7 +226,14 @@ impl Clipboard {
         }
 
         if offer.has_mime_type(&self.self_mime) {
+            if let Ok(mut g) = LAST_EXTERNAL_HTML.lock() {
+                *g = None;
+            }
             return self.contents.clone();
+        }
+
+        if let Ok(mut g) = LAST_EXTERNAL_HTML.lock() {
+            *g = offer.read_html(&self.connection);
         }
 
         let item = offer

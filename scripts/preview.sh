@@ -11,6 +11,41 @@ preview_library="${QUIET_MD_HOME:-$(cat dist-preview/library-path 2>/dev/null ||
 # An empty path would put the library in the current directory.
 [ -n "$preview_library" ] || { echo "preview.sh: no preview library" >&2; exit 1; }
 export QUIET_MD_HOME="$preview_library"
+if [ "$(uname -s)" = "Linux" ]; then
+  cargo build --release --locked --workspace
+  dir="$PWD/dist-preview"
+  bin="$dir/quiet_md"
+  cli="$dir/quiet"
+  pkill -f "^$bin" || true
+  sleep 1
+  mkdir -p "$dir" "$HOME/.local/bin" "$HOME/.local/share/applications" "$HOME/.local/share/icons/hicolor/512x512/apps"
+  cp target/release/quiet_md "$bin.bin"
+  cp target/release/quiet "$cli"
+  printf '#!/bin/sh\nexport QUIET_MD_HOME="${QUIET_MD_HOME:-%s}"\nexec "%s.bin" "$@"\n' "$preview_library" "$bin" > "$bin"
+  chmod +x "$bin" "$cli"
+  ln -sf "$bin" "$HOME/.local/bin/quiet-md"
+  ln -sf "$cli" "$HOME/.local/bin/quiet"
+  cp assets/branding/app-icon.png "$HOME/.local/share/icons/hicolor/512x512/apps/quiet-md.png"
+  cat > "$HOME/.local/share/applications/quiet-md.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Quiet.md
+GenericName=Markdown Notes
+Comment=Local-first rich Markdown notes
+Exec=$bin %U
+Icon=quiet-md
+Terminal=false
+Categories=Office;TextEditor;Utility;
+StartupWMClass=quiet-md
+MimeType=x-scheme-handler/quiet-md;
+DESKTOP
+  command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$HOME/.local/share/applications" || true
+  if [ "${QUIET_MD_NO_LAUNCH:-0}" != "1" ]; then
+    (QUIET_MD_HOME="$QUIET_MD_HOME" nohup "$bin" >/tmp/quiet-md-preview.log 2>&1 &)
+    sleep 2; pgrep -fa "^$bin"
+  fi
+  exit 0
+fi
 app="$PWD/dist-preview/quiet.md.app"
 bin="$app/Contents/MacOS/quiet_md"
 pkill -f "^$bin" || true

@@ -453,6 +453,16 @@ impl Store {
         Ok(())
     }
 
+    pub fn root(&self) -> &std::path::Path {
+        &self.root
+    }
+
+    pub fn assets_path(&self) -> PathBuf {
+        let d = self.root.join("assets");
+        let _ = std::fs::create_dir_all(&d);
+        d
+    }
+
     pub fn trash_dir(&self) -> PathBuf {
         let d = self.root.join("trash");
         let _ = std::fs::create_dir_all(&d);

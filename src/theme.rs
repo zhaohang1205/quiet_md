@@ -279,7 +279,9 @@ pub const UI_FONT: &str = ".SystemUIFont";
 /// SF Mono.
 #[cfg(target_os = "macos")]
 pub const MONO_FONT: &str = ".AppleSystemUIFontMonospaced";
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "linux")]
+pub const MONO_FONT: &str = "JetBrainsMono Nerd Font";
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 pub const MONO_FONT: &str = "Consolas";
 
 pub struct Theme;

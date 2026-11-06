@@ -119,11 +119,18 @@ impl LinuxCommon {
 
         let background_executor = BackgroundExecutor::new(dispatcher.clone());
 
+        // quiet.md: read initial dark/light appearance from Omarchy theme state if present.
+        let appearance = std::env::var_os("HOME")
+            .map(|h| std::path::Path::new(&h).join(".local/state/omarchy/current/theme"))
+            .filter(|d| d.is_dir())
+            .map(|d| if d.join("light.mode").exists() { WindowAppearance::Light } else { WindowAppearance::Dark })
+            .unwrap_or(WindowAppearance::Light);
+
         let common = LinuxCommon {
             background_executor,
             foreground_executor: ForegroundExecutor::new(dispatcher),
             text_system,
-            appearance: WindowAppearance::Light,
+            appearance,
             auto_hide_scrollbars: false,
             callbacks,
             signal,
@@ -309,16 +316,22 @@ impl<P: LinuxClient + 'static> Platform for P {
                     "Open File"
                 };
 
-                let request = match ashpd::desktop::file_chooser::OpenFileRequest::default()
+                let mut req = ashpd::desktop::file_chooser::OpenFileRequest::default()
                     .identifier(identifier.await)
                     .modal(true)
                     .title(title)
                     .accept_label(options.prompt.as_ref().map(crate::SharedString::as_str))
                     .multiple(options.multiple)
-                    .directory(options.directories)
-                    .send()
-                    .await
-                {
+                    .directory(options.directories);
+                // quiet.md: pass PathPromptOptions.extensions to the XDG file chooser portal.
+                if let Some(exts) = options.extensions.as_ref().filter(|e| !e.is_empty()) {
+                    let mut filter = ashpd::desktop::file_chooser::FileFilter::new("Files");
+                    for ext in exts {
+                        filter = filter.glob(&format!("*.{ext}"));
+                    }
+                    req = req.filter(filter);
+                }
+                let request = match req.send().await {
                     Ok(request) => request,
                     Err(err) => {
                         let result = match err {

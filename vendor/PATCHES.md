@@ -31,6 +31,9 @@ diff -ru $R/taffy-0.9.0/src vendor/taffy/src
 | 13 | `text_system/line.rs` | 文字与背景装饰的场景排序边界包含居中、右对齐后的字形位置及超宽文字 | 图片描述不再穿透浮动工具栏，避免工具栏看起来透明 |
 | 14 | `platform/mac/text_system.rs`、`platform/mac.rs`、`platform.rs` | `font_ids_by_postscript_name` 一个名字对应多个 FontId，CoreText 回退来的字体按字形数挑出同一份字体；新增 `check_fallback_glyphs` 供测试调用（`editor::text::tests`） | 系统回退用的苹方（PingFangUI.ttc）和下载的 PingFang.ttc 都叫 `PingFangSC-Regular`，字形表不同；原来按名字查到另一份，编辑器里的中文画成错字 |
 | 15 | `platform/windows/directx_renderer.rs` | 调试构建编译着色器时，路径按宽字符串传给 `D3DCompileFromFile`（原来 `to_str().unwrap()`） | 仓库放在含中文等非 ASCII 字符的目录下也能跑调试构建 |
+| 16 | `platform/linux/text_system.rs` | 允许加载 `KaTeX_` 与 Emoji 字体（无 `m` 字形不剔除）；将系统 UI、等宽、衬线、苹方与 Emoji 字体名映射到 Linux 已安装字体（Adwaita Sans / JetBrainsMono Nerd Font / Noto Sans CJK SC / Noto Color Emoji 等） | Linux 下数学公式符号、代码块等宽字体、中英文混排与 Emoji 正常渲染 |
+| 17 | `platform/linux/wayland/window.rs`、`platform/linux/wayland/client.rs`、`platform/linux/x11/client.rs`、`platform/linux/platform.rs` | Wayland 创建窗口时设置 `params.titlebar` 初始标题；`prompt_for_paths` 支持 `PathPromptOptions.extensions` 文件过滤；启动时读取 Omarchy 当前主题深浅色状态；XDP 外观变化回调前释放 `client` 的 `RefCell` 借用 | Linux / Omarchy Wayland 窗口标题、导入对话框扩展名过滤、深色主题启动同步，以及防止 `observe_window_appearance` 中调用 `cx.window_appearance()` 触发 `RefCell already borrowed` 崩溃 |
+| 18 | `platform/linux/wayland/clipboard.rs`、`platform/linux/wayland.rs`、`platform/linux.rs`、`platform.rs` | Wayland 剪贴板支持 `text/plain` 并在读取外部 `DataOffer` 时一并读取 `text/html`（暴露 `gpui::clipboard_html`） | Linux Wayland 下从浏览器或外部应用复制富文本粘贴保留格式，且自持有剪贴板时不死锁 |
 
 ## taffy 0.9.0
 

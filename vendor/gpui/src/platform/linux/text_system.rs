@@ -54,6 +54,27 @@ impl CosmicTextSystem {
     pub(crate) fn new() -> Self {
         // todo(linux) make font loading non-blocking
         let mut font_system = FontSystem::new();
+        // quiet.md: point cosmic-text's generic families at installed Linux fonts.
+        for (candidates, setter) in [
+            (
+                &["Adwaita Sans", "Inter", "Noto Sans", "Ubuntu", "Cantarell", "Liberation Sans", "DejaVu Sans"][..],
+                cosmic_text::fontdb::Database::set_sans_serif_family as fn(&mut cosmic_text::fontdb::Database, String),
+            ),
+            (
+                &["JetBrainsMono Nerd Font", "JetBrains Mono", "Adwaita Mono", "Liberation Mono", "DejaVu Sans Mono", "Noto Sans Mono"][..],
+                cosmic_text::fontdb::Database::set_monospace_family,
+            ),
+            (
+                &["Liberation Serif", "Noto Serif", "DejaVu Serif"][..],
+                cosmic_text::fontdb::Database::set_serif_family,
+            ),
+        ] {
+            if let Some(&family) = candidates.iter().find(|&&c| {
+                font_system.db().faces().any(|f| f.families.iter().any(|fam| fam.0 == c))
+            }) {
+                setter(font_system.db_mut(), family.to_string());
+            }
+        }
 
         Self(RwLock::new(CosmicTextSystemState {
             font_system,
@@ -212,16 +233,58 @@ impl CosmicTextSystemState {
         name: &str,
         features: &FontFeatures,
     ) -> Result<SmallVec<[FontId; 4]>> {
-        // TODO: Determine the proper system UI font.
-        let name = crate::text_system::font_name_with_fallbacks(name, "IBM Plex Sans");
+        // quiet.md: resolve system/macOS/Windows font names and allow KaTeX_ / emoji faces without 'm'.
+        let candidates: &[&str] = match name {
+            ".SystemUIFont" | ".AppleSystemUIFont" | ".ZedSans" | "Zed Plex Sans" => &[
+                "Adwaita Sans",
+                "Inter",
+                "Noto Sans",
+                "Ubuntu",
+                "Cantarell",
+                "Liberation Sans",
+                "DejaVu Sans",
+            ],
+            ".AppleSystemUIFontMonospaced" | ".ZedMono" | "Zed Plex Mono" | "Menlo" | "Consolas" | "SF Mono" => &[
+                name,
+                "JetBrainsMono Nerd Font",
+                "JetBrains Mono",
+                "Adwaita Mono",
+                "Liberation Mono",
+                "DejaVu Sans Mono",
+                "Noto Sans Mono",
+            ],
+            "PingFang SC" | "Hiragino Sans GB" | "Microsoft YaHei" => &[
+                name,
+                "Noto Sans CJK SC",
+                "Source Han Sans SC",
+                "WenQuanYi Micro Hei",
+            ],
+            "Times New Roman" | "Georgia" => &[
+                name,
+                "Liberation Serif",
+                "Noto Serif",
+                "DejaVu Serif",
+            ],
+            "Apple Color Emoji" | "Segoe UI Emoji" => &[
+                name,
+                "Noto Color Emoji",
+            ],
+            _ => &[name],
+        };
 
-        let families = self
-            .font_system
-            .db()
-            .faces()
-            .filter(|face| face.families.iter().any(|family| *name == family.0))
-            .map(|face| (face.id, face.post_script_name.clone()))
-            .collect::<SmallVec<[_; 4]>>();
+        let mut families = SmallVec::<[_; 4]>::new();
+        for &candidate in candidates {
+            families = self
+                .font_system
+                .db()
+                .faces()
+                .filter(|face| face.families.iter().any(|family| candidate == family.0))
+                .map(|face| (face.id, face.post_script_name.clone()))
+                .collect();
+            if !families.is_empty() {
+                break;
+            }
+        }
 
         let mut loaded_font_ids = SmallVec::new();
         for (font_id, postscript_name) in families {
@@ -235,9 +298,12 @@ impl CosmicTextSystemState {
                 "SegoeFluentIcons", // NOTE: Segoe fluent icons postscript name is inconsistent
                 "Segoe Fluent Icons",
             ];
+            let is_known_emoji_font = check_is_known_emoji_font(&postscript_name);
 
             if font.as_swash().charmap().map('m') == 0
                 && !allowed_bad_font_names.contains(&postscript_name.as_str())
+                && !postscript_name.starts_with("KaTeX_")
+                && !is_known_emoji_font
             {
                 self.font_system.db_mut().remove_face(font.id());
                 continue;
@@ -248,7 +314,7 @@ impl CosmicTextSystemState {
             self.loaded_fonts.push(LoadedFont {
                 font,
                 features: features.try_into()?,
-                is_known_emoji_font: check_is_known_emoji_font(&postscript_name),
+                is_known_emoji_font,
             });
         }
 

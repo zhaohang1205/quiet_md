@@ -291,6 +291,11 @@ impl WaylandWindow {
             toplevel.set_parent(parent.as_ref());
         }
 
+        // quiet.md: apply initial titlebar title on Wayland toplevel.
+        if let Some(title) = params.titlebar.as_ref().and_then(|t| t.title.as_ref()) {
+            toplevel.set_title(title.to_string());
+        }
+
         if let Some(size) = params.window_min_size {
             toplevel.set_min_size(size.width.0 as i32, size.height.0 as i32);
         }

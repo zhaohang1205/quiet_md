@@ -79,6 +79,7 @@ fn open_main_window(scripted: bool, cx: &mut App) {
             }),
             window_min_size: Some(size(px(480.), px(480.))),
             focus: !scripted,
+            app_id: Some("quiet-md".into()),
             ..Default::default()
         },
         |window, cx| {
